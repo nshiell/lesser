@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
- 
+#include <string.h>
+
 #define BUFFERSIZE    1
 
 void get_screen_contents() {
@@ -9,12 +10,24 @@ void get_screen_contents() {
     //system ("tput smcup; tput rmcup > ~/.lesser-console");
 }
 
-
 void draw_screen_contents() {
     //system ("tput smcup; clear; sleep 5; tput rmcup");
     system ("tput rmcup");
     //system ("tput smcup; tput rmcup > ~/.lesser-console");
 }
+
+void create_view(char **win) {
+    int width = 60;
+    int height = 30;
+    
+    int i;
+
+    for (i = 0; i < width; i++) {
+        *win = strcat(*win, "_");
+    }
+}
+
+
 
 int main(int argc, char **argv) {
     unsigned char     buffer[BUFFERSIZE];
@@ -24,6 +37,12 @@ int main(int argc, char **argv) {
 
     get_screen_contents();
     draw_screen_contents();
+    
+    char *win;
+    win  = (char*)malloc(10);
+
+    create_view(&win);
+    printf("%s", win);
 
     buffer_size=sizeof(unsigned char)*BUFFERSIZE;
     /* open stdin for reading */
