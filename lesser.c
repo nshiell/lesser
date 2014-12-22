@@ -27,7 +27,40 @@ void create_view(char **win) {
     }
 }
 
+const char * get_data()
+{
+    unsigned char     buffer[BUFFERSIZE];
+    FILE                         *instream;
+    int                            bytes_read=0;
+    int                            buffer_size=0;
 
+    char *x;
+    x = (char*)malloc(10);
+    x[0] = '\0';
+    
+    buffer_size=sizeof(unsigned char)*BUFFERSIZE;
+    /* open stdin for reading */
+    instream=fopen("/dev/stdin","r");
+
+    /* did it open? */
+    if(instream!=NULL){
+        /* read from stdin until it's end */
+        while((bytes_read=fread(&buffer, buffer_size, 1, instream))==buffer_size){
+            //fprintf(stdout, "%c", buffer[0]);
+            x = strcat(x, &buffer[0]);
+        }
+    }
+    /* if any error occured, exit with an error message */
+    else{
+        fprintf(stderr, "ERROR opening stdin. aborting.\n");
+        exit(1);
+    }
+    
+    
+    const char *r = x;
+
+    return r;
+}
 
 int main(int argc, char **argv) {
     unsigned char     buffer[BUFFERSIZE];
@@ -39,11 +72,14 @@ int main(int argc, char **argv) {
     draw_screen_contents();
     
     char *win;
-    win  = (char*)malloc(10);
+    win = (char*)malloc(10);
 
     create_view(&win);
     printf("%s", win);
-
+    printf("%s", get_data());
+    
+    return(0);
+    
     buffer_size=sizeof(unsigned char)*BUFFERSIZE;
     /* open stdin for reading */
     instream=fopen("/dev/stdin","r");
