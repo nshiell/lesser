@@ -16,10 +16,7 @@ void draw_screen_contents() {
     //system ("tput smcup; tput rmcup > ~/.lesser-console");
 }
 
-void create_view(char **win) {
-    int width = 60;
-    int height = 30;
-    
+void view_create(char **win, int width, int height) {
     char spaces[200];
     //spaces = (char*)malloc(10);
     spaces[0] = '\0';
@@ -47,6 +44,25 @@ void create_view(char **win) {
     strcat(*win, "|");
 }
 
+void view_scrollbars_create(char **win, char **scrollbar, char *text, int offset) {
+    /*char scrollbar[300];
+    scrollbar[0] = '\0';*/  
+
+    strcat(*scrollbar, "/\\\n");
+    strcat(*scrollbar, "##\n");
+    strcat(*scrollbar, "##\n");
+    strcat(*scrollbar, "##\n");
+    strcat(*scrollbar, "##\n");
+    strcat(*scrollbar, "\n");
+    strcat(*scrollbar, "\n");
+    strcat(*scrollbar, "\n");
+    strcat(*scrollbar, "\n");
+    strcat(*scrollbar, "\n");
+    strcat(*scrollbar, "\n");
+    strcat(*scrollbar, "\n");
+    strcat(*scrollbar, "\\/\n");
+}
+
 const char * get_data()
 {
     unsigned char     buffer[BUFFERSIZE];
@@ -55,9 +71,9 @@ const char * get_data()
     int                            buffer_size=0;
 
     char *x;
-    x = (char*)malloc(10);
+    x = (char*)malloc(130000);
     x[0] = '\0';
-    
+
     buffer_size=sizeof(unsigned char)*BUFFERSIZE;
     /* open stdin for reading */
     instream=fopen("/dev/stdin","r");
@@ -98,13 +114,27 @@ int main(int argc, char **argv) {
     char *win;
     win = (char*)malloc(10);
 
-    create_view(&win);
+    view_create(&win, 60, 30);
 // printf("\033[6;3HHello\n");
     //printf("%s", "\033[5;2f");
     //draw_screen_contents();
     //console_cursor_movo_to(5, 20);
     printf("%s", win);
     printf("%s", get_data());
+    
+
+    char *scrollbar;
+    scrollbar = (char*)malloc(10);
+    scrollbar[0] = '\0';
+    view_scrollbars_create(&win, &scrollbar, "sdfsdf", 0);
+    
+    printf("%s", "\n");
+    printf("%s", "HERE BELLOW\n");
+    printf("%s", "\n");
+    printf("%s", "\n");
+    printf("%s", scrollbar);
+    
+    
     //sleep(5);
     //draw_screen_contents();
     return(0);
