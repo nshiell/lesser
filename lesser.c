@@ -44,10 +44,11 @@ void view_create(char **win, int width, int height) {
     strcat(*win, "|");
 }
 
-void view_scrollbars_create(char **win, char **scrollbar, char *text, int offset) {
+void view_scrollbars_create(char **win, char **scrollbar, char *text, int line_count, int offset) {
     /*char scrollbar[300];
     scrollbar[0] = '\0';*/  
-
+    printf("%d\n", line_count);
+    printf("%d\n", line_count);
     strcat(*scrollbar, "/\\\n");
     strcat(*scrollbar, "##\n");
     strcat(*scrollbar, "##\n");
@@ -63,17 +64,17 @@ void view_scrollbars_create(char **win, char **scrollbar, char *text, int offset
     strcat(*scrollbar, "\\/\n");
 }
 
-const char * get_data()
+void input_stdin_get_raw_with_linecount(char *text, int *line_count)
 {
     unsigned char     buffer[BUFFERSIZE];
     FILE                         *instream;
     int                            bytes_read=0;
     int                            buffer_size=0;
-
+/*
     char *x;
     x = (char*)malloc(130000);
     x[0] = '\0';
-
+*/
     buffer_size=sizeof(unsigned char)*BUFFERSIZE;
     /* open stdin for reading */
     instream=fopen("/dev/stdin","r");
@@ -83,7 +84,10 @@ const char * get_data()
         /* read from stdin until it's end */
         while((bytes_read=fread(&buffer, buffer_size, 1, instream))==buffer_size){
             //fprintf(stdout, "%c", buffer[0]);
-            x = strcat(x, &buffer[0]);
+            text = strcat(text, &buffer[0]);
+            if (buffer[0] == *"\n") {
+                *line_count = *line_count + 1;
+            }
         }
     }
     /* if any error occured, exit with an error message */
@@ -91,11 +95,6 @@ const char * get_data()
         fprintf(stderr, "ERROR opening stdin. aborting.\n");
         exit(1);
     }
-    
-    
-    const char *r = x;
-
-    return r;
 }
 
 void console_cursor_movo_to(int x, int y) {
@@ -120,14 +119,22 @@ int main(int argc, char **argv) {
     //draw_screen_contents();
     //console_cursor_movo_to(5, 20);
     printf("%s", win);
-    printf("%s", get_data());
+
+    char *text = (char*)malloc(130000);
+    text[0] = '\0';
     
+    int line_count = 0;
+    
+    input_stdin_get_raw_with_linecount(text, &line_count);
+    /*printf("%s", text);
+    printf("%s", "\n\n");
+    printf("%s", text);*/
 
     char *scrollbar;
     scrollbar = (char*)malloc(10);
     scrollbar[0] = '\0';
-    view_scrollbars_create(&win, &scrollbar, "sdfsdf", 0);
-    
+    view_scrollbars_create(&win, &scrollbar, text, line_count, 0);
+
     printf("%s", "\n");
     printf("%s", "HERE BELLOW\n");
     printf("%s", "\n");
