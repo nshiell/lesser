@@ -4,13 +4,22 @@
 
 #define BUFFERSIZE    1
 
+/**
+ * Output can be used to render to the screen
+ * Also stores partial parts of the window
+ */
 struct View {
     char *window;
+    char *scrollbar;
 };
 
+/**
+ * Will create a view
+ * Basically the window geometery empty (with spaces)
+ */
 struct View view_create(int width, int height) {
     char *win;
-    win = (char*)malloc(10);
+    win = (char*)malloc(10000);
 
     char spaces[200];
     spaces[0] = '\0';
@@ -39,31 +48,52 @@ struct View view_create(int width, int height) {
     strcat(win, "|");
     
     struct View view;
-    //view.window = (char*)malloc(10);
+    //view.window = (char*)malloc(3000);
     view.window = win;
     return view;
 }
 
-void view_scrollbars_create(char **win, char **scrollbar, char *text, int line_count, int offset) {
+/**
+ * Will append a scrollbar to the right of the window
+ * @param view       Will append the scrollbar
+ * @param line_count How many lines are there?
+ * @param offset     Which line are we scrolled too?
+ */
+void view_add_scrollbar(struct View *view, int line_count, int offset) {
+    char *scrollbar;
+    scrollbar = (char*)malloc(10);
+    scrollbar[0] = '\0';
+
+    printf("%s", view->window);
     printf("%d\n", line_count);
     printf("%d\n", line_count);
-    strcat(*scrollbar, "/\\\n");
-    strcat(*scrollbar, "##\n");
-    strcat(*scrollbar, "##\n");
-    strcat(*scrollbar, "##\n");
-    strcat(*scrollbar, "##\n");
-    strcat(*scrollbar, "\n");
-    strcat(*scrollbar, "\n");
-    strcat(*scrollbar, "\n");
-    strcat(*scrollbar, "\n");
-    strcat(*scrollbar, "\n");
-    strcat(*scrollbar, "\n");
-    strcat(*scrollbar, "\n");
-    strcat(*scrollbar, "\\/\n");
+    strcat(scrollbar, "/\\\n");
+    strcat(scrollbar, "##\n");
+    strcat(scrollbar, "##\n");
+    strcat(scrollbar, "##\n");
+    strcat(scrollbar, "##\n");
+    strcat(scrollbar, "\n");
+    strcat(scrollbar, "\n");
+    strcat(scrollbar, "\n");
+    strcat(scrollbar, "\n");
+    strcat(scrollbar, "\n");
+    strcat(scrollbar, "\n");
+    strcat(scrollbar, "\n");
+    strcat(scrollbar, "\\/\n");
+
+    //view->scrollbar = (char*)malloc(10);
+    //view->scrollbar[0] = '\0';
+    view->scrollbar = scrollbar;
 }
 
-void input_stdin_get_raw_with_line_count(char *text, int *line_count)
+/**
+ * @refactor?
+ */
+char * input_stdin_get_raw_with_line_count(int *line_count)
 {
+    char *text = (char*)malloc(130000);
+    text[0] = '\0';
+
     unsigned char buffer[BUFFERSIZE];
     FILE *instream;
     int bytes_read = 0;
@@ -88,6 +118,8 @@ void input_stdin_get_raw_with_line_count(char *text, int *line_count)
         fprintf(stderr, "ERROR opening stdin. aborting.\n");
         exit(1);
     }
+
+    return text;
 }
 /*
 void console_cursor_movo_to(int x, int y) {
@@ -95,32 +127,20 @@ void console_cursor_movo_to(int x, int y) {
 }*/
 
 int main(int argc, char **argv) {
-    char *win;
-    win = (char*)malloc(10);
-
-    //struct View view = view_create(60, 30);
     struct View view = view_create(60, 30);
 
-    //printf("%s", win);
-    printf("%s", view.window);
-
-    char *text = (char*)malloc(130000);
-    text[0] = '\0';
-    
     int line_count = 0;
     
-    input_stdin_get_raw_with_line_count(text, &line_count);
-
-    char *scrollbar;
-    scrollbar = (char*)malloc(10);
-    scrollbar[0] = '\0';
-    //view_scrollbars_create(&win, &scrollbar, text, line_count, 0);
+    char *text = input_stdin_get_raw_with_line_count(&line_count);
+    
+    view_add_scrollbar(&view, line_count, 0);
 
     printf("%s", "\n");
     printf("%s", "HERE BELLOW\n");
     printf("%s", "\n");
     printf("%s", "\n");
-    printf("%s", scrollbar);
+    printf("%s", text);
+    printf("%s", view.scrollbar);
 
     return(0);
 }
