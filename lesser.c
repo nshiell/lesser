@@ -3,13 +3,34 @@
 #include <string.h>
 
 #define BUFFERSIZE    1
+#define VIEW_BLANK_CHAR "X"
+#define LINE_BREAK "\n"
+
+typedef int bool;
+#define true 1
+#define false 0
+
+struct Geometry {
+    int x;
+    int y;
+    int width;
+    int height;
+    int innerWidth;
+    int innerHeight;
+};
 
 /**
  * Output can be used to render to the screen
  * Also stores partial parts of the window
  */
 struct View {
-    char *window;
+    // The main window box
+    //char *window;
+    struct Window {
+        char *rendered;
+        struct Geometry geometry;
+    } window;
+    // The ascii image
     char *scrollbar;
 };
 
@@ -26,7 +47,7 @@ struct View view_create(int width, int height) {
 
     int i;
     for (i = 0; i < width - 2; i++) {
-        strcat(spaces, " ");
+        strcat(spaces, VIEW_BLANK_CHAR);
     }
 
     for (i = 0; i < width; i++) {
@@ -48,8 +69,12 @@ struct View view_create(int width, int height) {
     strcat(win, "|");
     
     struct View view;
-    //view.window = (char*)malloc(3000);
-    view.window = win;
+    view.window.rendered = (char*)malloc(3000);
+    view.window.rendered = win;
+    view.window.geometry.innerWidth = width - 2;
+    view.window.geometry.innerHeight = height - 2;
+    view.window.geometry.width = width;
+    view.window.geometry.height = height;
     return view;
 }
 
@@ -64,7 +89,8 @@ void view_add_scrollbar(struct View *view, int line_count, int offset) {
     scrollbar = (char*)malloc(10);
     scrollbar[0] = '\0';
 
-    printf("%s", view->window);
+    printf("%s", view->window.rendered);
+    printf("%d\n", view->window.geometry.innerWidth);
     printf("%d\n", line_count);
     printf("%d\n", line_count);
     strcat(scrollbar, "/\\\n");
@@ -121,6 +147,73 @@ char * input_stdin_get_raw_with_line_count(int *line_count)
 
     return text;
 }
+
+void view_add_text(struct View *view, char *text) {
+    // get lines
+    // *text
+
+    // get template
+    // view.window.rendered
+
+    // Mark which line of text we are on
+    int current_template_line = 0;
+
+    //char text_lines[view->window.geometry.innerHeight][view->window.geometry.innerWidth];
+    char text_lines[view->window.geometry.height][view->window.geometry.width + 1];
+    char *text_char;
+    text_char = (char*)malloc(1);
+    
+    // Loop over view template line by line
+    int row_no;
+    int col_no;
+    row_no = 0;
+    col_no = 0;
+
+    int i;
+    for (i = 0; i < strlen(view->window.rendered); i++) {
+        //printf("%c\n", view->window.rendered[i]);
+        *text_char = view->window.rendered[i];
+        if (*text_char == *LINE_BREAK) {
+            text_lines[row_no][col_no] = '\0';
+            row_no = row_no + 1;
+            //text_lines[row_no][0] = *"";
+            if (row_no == 1 && 0) { // 29
+                break;
+            }
+            text_lines[row_no][0] = '\0';
+
+            col_no = 0;
+        } else {
+            printf("\n\n%d %d\n", row_no, col_no);
+            printf("%s\n", text_lines[row_no]);
+            text_lines[row_no][col_no] = *text_char;
+            col_no = col_no + 1;
+        }
+        
+        //text_char
+    }
+
+    //char strs[NUMBER_OF_STRINGS][STRING_LENGTH+1];
+    
+
+    // count number of X in the first line
+    //    if count X == 0, no text here
+    //        Put each char into the return
+    //    else if count X < line length, then line too long == true
+
+    // Loop over chars in template if X
+    // replace with char, else leave
+    /*
+    int i;
+    char x[] = "123456";
+    
+    view.window.rendered
+    
+    for (i = 0; i < strlen(x); i++) {
+        printf("%c\n", x[i]);
+    }*/
+}
+
 /*
 void console_cursor_movo_to(int x, int y) {
     printf("\033[%d;%df", x, y);
@@ -130,17 +223,22 @@ int main(int argc, char **argv) {
     struct View view = view_create(60, 30);
 
     int line_count = 0;
-    
+
     char *text = input_stdin_get_raw_with_line_count(&line_count);
+
+    char *text_visibile = "sdfhgsdfgsdfgsghdfgh";
     
+    view_add_text(&view, text_visibile);
     view_add_scrollbar(&view, line_count, 0);
 
+    /*
     printf("%s", "\n");
     printf("%s", "HERE BELLOW\n");
     printf("%s", "\n");
     printf("%s", "\n");
-    printf("%s", text);
-    printf("%s", view.scrollbar);
 
-    return(0);
+    printf("%s", view.text);
+    printf("%s", view.scrollbar);*/
+
+    return 0;
 }
