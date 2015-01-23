@@ -28,6 +28,7 @@ struct View {
     //char *window;
     struct Window {
         char *rendered;
+        char *template;
         struct Geometry geometry;
     } window;
     // The ascii image
@@ -46,10 +47,12 @@ struct View view_create(int width, int height) {
     spaces[0] = '\0';
 
     int i;
-    for (i = 0; i < width - 2; i++) {
+    for (i = 0; i < width - 2 - 2; i++) {
         strcat(spaces, VIEW_BLANK_CHAR);
     }
 
+    strcat(spaces, "YY");
+    
     for (i = 0; i < width; i++) {
         strcat(win, "_");
     }
@@ -70,7 +73,9 @@ struct View view_create(int width, int height) {
     
     struct View view;
     view.window.rendered = (char*)malloc(3000);
-    view.window.rendered = win;
+    
+    view.window.template = (char*)malloc(3000);
+    view.window.template = win;
     view.window.geometry.innerWidth = width - 2;
     view.window.geometry.innerHeight = height - 2;
     view.window.geometry.width = width;
@@ -89,7 +94,8 @@ void view_add_scrollbar(struct View *view, int line_count, int offset) {
     scrollbar = (char*)malloc(10);
     scrollbar[0] = '\0';
 
-    printf("%s", view->window.rendered);
+    printf("%s\n\n", view->window.template);
+    printf("%s\n\n", view->window.rendered);
     printf("%d\n", view->window.geometry.innerWidth);
     printf("%d\n", line_count);
     printf("%d\n", line_count);
@@ -153,46 +159,86 @@ void view_add_text(struct View *view, char *text) {
     // *text
 
     // get template
-    // view.window.rendered
+    // view.window.template
 
     // Mark which line of text we are on
     int current_template_line = 0;
 
     //char text_lines[view->window.geometry.innerHeight][view->window.geometry.innerWidth];
-    char text_lines[view->window.geometry.height][view->window.geometry.width + 1];
+    //char text_lines[view->window.geometry.height + 1][view->window.geometry.innerWidth + 1];
+    //char (char*)malloc((view->window.geometry.height + 1) * (view->window.geometry.innerWidth + 1));
+    
+    char *text_lines = (char*)malloc(130000);
     char *text_char;
     text_char = (char*)malloc(1);
-    
+
+    char *template_char;
+    template_char = (char*)malloc(1);
+
+    int text_char_i;
+    text_char_i = 0;
+
     // Loop over view template line by line
     int row_no;
     int col_no;
     row_no = 0;
     col_no = 0;
 
+    bool new_line_found = false;
+    
+    //printf("%s", view->window.template);
     int i;
-    for (i = 0; i < strlen(view->window.rendered); i++) {
-        //printf("%c\n", view->window.rendered[i]);
-        *text_char = view->window.rendered[i];
-        if (*text_char == *LINE_BREAK) {
-            text_lines[row_no][col_no] = '\0';
+    for (i = 0; i < strlen(view->window.template); i++) {
+        //printf("%c\n", view->window.template[i]);
+        *template_char = view->window.template[i];
+        if (*template_char == *LINE_BREAK) {
+            strcat(text_lines, "\n");
+            //text_lines[row_no][col_no] = '\0';
+            
+            //printf("%s\n", text_lines[row_no]);
+
             row_no = row_no + 1;
             //text_lines[row_no][0] = *"";
             if (row_no == 1 && 0) { // 29
                 break;
             }
-            text_lines[row_no][0] = '\0';
+            //text_lines[row_no][0] = '\0';
 
             col_no = 0;
+            new_line_found = false;
+        } else if (*template_char == *VIEW_BLANK_CHAR) {
+            text_char_i = text_char_i + 1;
+            *text_char = text[text_char_i];
+            
+            if (*text_char == *LINE_BREAK) {
+                new_line_found = true;
+                *text_char = *"\n";
+                
+            } else {
+                if (text_char_i > strlen(text)) {
+                    *text_char = *" ";
+                } else {
+                    *text_char = text[text_char_i];
+                }
+            }
+
+            //text_lines[row_no][col_no] = *text_char;
+            strcat(text_lines, text_char);
+            col_no = col_no + 1;
         } else {
-            printf("\n\n%d %d\n", row_no, col_no);
-            printf("%s\n", text_lines[row_no]);
-            text_lines[row_no][col_no] = *text_char;
+            //printf("\n\n%d %d\n", row_no, col_no);
+            //text_lines[row_no][col_no] = *template_char;
+            strcat(text_lines, template_char);
             col_no = col_no + 1;
         }
         
         //text_char
     }
 
+    //printf("%s\n", text_lines);
+    
+    printf("%s\n", text_lines);
+    
     //char strs[NUMBER_OF_STRINGS][STRING_LENGTH+1];
     
 
@@ -207,7 +253,7 @@ void view_add_text(struct View *view, char *text) {
     int i;
     char x[] = "123456";
     
-    view.window.rendered
+    view.window.template
     
     for (i = 0; i < strlen(x); i++) {
         printf("%c\n", x[i]);
@@ -226,7 +272,8 @@ int main(int argc, char **argv) {
 
     char *text = input_stdin_get_raw_with_line_count(&line_count);
 
-    char *text_visibile = "sdfhgsdfgsdfgsghdfgh";
+    //char *text_visibile = "sdfhgsdfgsdfgsghdfgh";
+    char *text_visibile = text;
     
     view_add_text(&view, text_visibile);
     view_add_scrollbar(&view, line_count, 0);
