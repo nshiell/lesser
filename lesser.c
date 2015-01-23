@@ -164,10 +164,7 @@ void view_add_text(struct View *view, char *text) {
     // Mark which line of text we are on
     int current_template_line = 0;
 
-    //char text_lines[view->window.geometry.innerHeight][view->window.geometry.innerWidth];
-    //char text_lines[view->window.geometry.height + 1][view->window.geometry.innerWidth + 1];
-    //char (char*)malloc((view->window.geometry.height + 1) * (view->window.geometry.innerWidth + 1));
-    
+    //char (char*)malloc((view->window.geometry.height + 1) * (view->window.geometry.innerWidth + 1));    
     char *text_lines = (char*)malloc(130000);
     char *text_char;
     text_char = (char*)malloc(1);
@@ -185,25 +182,17 @@ void view_add_text(struct View *view, char *text) {
     col_no = 0;
 
     bool new_line_found = false;
-    
-    //printf("%s", view->window.template);
+
     int i;
     for (i = 0; i < strlen(view->window.template); i++) {
-        //printf("%c\n", view->window.template[i]);
         *template_char = view->window.template[i];
         if (*template_char == *LINE_BREAK) {
             strcat(text_lines, "\n");
-            //text_lines[row_no][col_no] = '\0';
-            
-            //printf("%s\n", text_lines[row_no]);
 
             row_no = row_no + 1;
-            //text_lines[row_no][0] = *"";
             if (row_no == 1 && 0) { // 29
                 break;
             }
-            //text_lines[row_no][0] = '\0';
-
             col_no = 0;
             new_line_found = false;
         } else if (*template_char == *VIEW_BLANK_CHAR) {
@@ -222,25 +211,15 @@ void view_add_text(struct View *view, char *text) {
                 }
             }
 
-            //text_lines[row_no][col_no] = *text_char;
             strcat(text_lines, text_char);
             col_no = col_no + 1;
         } else {
-            //printf("\n\n%d %d\n", row_no, col_no);
-            //text_lines[row_no][col_no] = *template_char;
             strcat(text_lines, template_char);
             col_no = col_no + 1;
         }
-        
-        //text_char
     }
-
-    //printf("%s\n", text_lines);
     
-    printf("%s\n", text_lines);
-    
-    //char strs[NUMBER_OF_STRINGS][STRING_LENGTH+1];
-    
+    printf("%s\n", text_lines);    
 
     // count number of X in the first line
     //    if count X == 0, no text here
