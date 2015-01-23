@@ -94,11 +94,11 @@ void view_add_scrollbar(struct View *view, int line_count, int offset) {
     scrollbar = (char*)malloc(10);
     scrollbar[0] = '\0';
 
-    printf("%s\n\n", view->window.template);
-    printf("%s\n\n", view->window.rendered);
-    printf("%d\n", view->window.geometry.innerWidth);
+    //printf("%s\n\n", view->window.template);
+    printf("%s", view->window.rendered);
+    /*printf("%d\n", view->window.geometry.innerWidth);
     printf("%d\n", line_count);
-    printf("%d\n", line_count);
+    printf("%d\n", line_count);*/
     strcat(scrollbar, "/\\\n");
     strcat(scrollbar, "##\n");
     strcat(scrollbar, "##\n");
@@ -181,45 +181,40 @@ void view_add_text(struct View *view, char *text) {
     row_no = 0;
     col_no = 0;
 
-    bool new_line_found = false;
+    bool end_of_line_found = false;
+
+    int text_length = strlen(text);
 
     int i;
     for (i = 0; i < strlen(view->window.template); i++) {
         *template_char = view->window.template[i];
-        if (*template_char == *LINE_BREAK) {
-            strcat(text_lines, "\n");
 
-            row_no = row_no + 1;
-            if (row_no == 1 && 0) { // 29
-                break;
-            }
-            col_no = 0;
-            new_line_found = false;
-        } else if (*template_char == *VIEW_BLANK_CHAR) {
-            text_char_i = text_char_i + 1;
-            *text_char = text[text_char_i];
-            
-            if (*text_char == *LINE_BREAK) {
-                new_line_found = true;
-                *text_char = *"\n";
-                
+        if (*template_char == *VIEW_BLANK_CHAR) {
+            if (end_of_line_found || text_char_i >= text_length) {
+                *text_char = *" ";
+                strcat(text_lines, text_char);
             } else {
-                if (text_char_i > strlen(text)) {
+                *text_char = text[text_char_i];
+                if (*text_char == *LINE_BREAK) {
+                    end_of_line_found = true;
                     *text_char = *" ";
-                } else {
-                    *text_char = text[text_char_i];
+                } else if ((int) *text_char < 32) {
+                    text_char_i = text_char_i + 1;
+                    i = i -1;
+                    continue;
                 }
-            }
 
-            strcat(text_lines, text_char);
-            col_no = col_no + 1;
+                strcat(text_lines, text_char);
+                text_char_i = text_char_i + 1;
+            }
+        } else if (*template_char == *LINE_BREAK) {
+            end_of_line_found = false;
+            strcat(text_lines, "\n");
         } else {
             strcat(text_lines, template_char);
-            col_no = col_no + 1;
         }
     }
-    
-    printf("%s\n", text_lines);    
+    view->window.rendered = text_lines;
 
     // count number of X in the first line
     //    if count X == 0, no text here
