@@ -121,8 +121,7 @@ void view_add_scrollbar(struct View *view, int line_count, int offset) {
 /**
  * @refactor?
  */
-char * input_stdin_get_raw_with_line_count(int *line_count)
-{
+char * input_stdin_get_raw_with_line_count(int *line_count) {
     char *text = (char*)malloc(130000);
     text[0] = '\0';
 
@@ -182,6 +181,7 @@ void view_add_text(struct View *view, char *text) {
     col_no = 0;
 
     bool end_of_line_found = false;
+    bool start_of_line_added = false;
 
     int text_length = strlen(text);
 
@@ -202,13 +202,36 @@ void view_add_text(struct View *view, char *text) {
                     text_char_i = text_char_i + 1;
                     i = i -1;
                     continue;
+                } else {
+                    start_of_line_added = true;
                 }
 
                 strcat(text_lines, text_char);
                 text_char_i = text_char_i + 1;
             }
         } else if (*template_char == *LINE_BREAK) {
+            if (!end_of_line_found && start_of_line_added) {
+                text_lines[strlen(text_lines) - 4] = *".";
+                text_lines[strlen(text_lines) - 5] = *".";
+                text_lines[strlen(text_lines) - 6] = *".";
+
+                while (true) {
+                    if (text[text_char_i] == *LINE_BREAK) {
+                        text_char_i = text_char_i + 1;
+                        break;
+                    }
+
+                    if (text_char_i >= strlen(text)) {
+                        printf("K ");
+                        break;
+                    }
+
+                    text_char_i = text_char_i + 1;
+                }
+                
+            }
             end_of_line_found = false;
+            start_of_line_added = false;
             strcat(text_lines, "\n");
         } else {
             strcat(text_lines, template_char);
@@ -251,6 +274,8 @@ int main(int argc, char **argv) {
     
     view_add_text(&view, text_visibile);
     view_add_scrollbar(&view, line_count, 0);
+
+    free(text);
 
     /*
     printf("%s", "\n");
