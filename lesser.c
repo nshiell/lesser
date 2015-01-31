@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <unistd.h>
+#include <termios.h>
+
 #define BUFFERSIZE    1
 #define VIEW_BLANK_CHAR "X"
 #define LINE_BREAK "\n"
@@ -9,6 +12,12 @@
 typedef int bool;
 #define true 1
 #define false 0
+
+#define KEY_QUIT      0
+#define KEY_DOWN      1
+#define KEY_UP        2
+#define KEY_PAGE_UP   3
+#define KEY_PAGE_DOWN 4
 
 struct Geometry {
     int x;
@@ -34,6 +43,64 @@ struct View {
     // The ascii image
     char *scrollbar;
 };
+
+struct ModelText {
+    struct Lines {
+        int count;
+        int offset;
+        int start;
+        int end;
+    } lines;
+    char *raw;
+    char *visibile;
+};
+
+struct ModelText model_text_create(char *raw) {
+    
+    struct ModelText text;
+    
+    int i;
+    text.lines.count = 0;
+    for (i = 0; i < strlen(raw); i = i + 1) {
+        if (raw[i] == *LINE_BREAK) {
+            text.lines.count = text.lines.count + 1;
+        }
+    }
+
+    text.lines.offset = 0;
+    text.lines.start = 0;
+    text.lines.end = 0;
+    text.raw = raw;
+
+    return text;
+}
+
+void model_text_set_visibile(struct ModelText *text) {
+    int i;
+    int line_breaks_seen = 0;
+    text->visibile = (char*)malloc(130000);
+    text->visibile[0] = '\0';
+
+    char *r = (char*)malloc(130000);
+    r[0] = '\0';
+    
+    for (i = 0; i < strlen(text->raw); i = i + 1) {
+        // is the number of newlines == offset?
+        if (line_breaks_seen >= text->lines.offset) {
+            text->visibile[strlen(text->visibile)] = text->raw[i];
+            text->visibile[strlen(text->visibile) + 1] = *"\0";
+        }
+
+        if (text->raw[i] == *LINE_BREAK) {
+            line_breaks_seen = line_breaks_seen + 1;
+        }
+    }
+    
+    
+    
+    //text.lines.offset;
+    //text.lines.start
+}
 
 /**
  * Will create a view
@@ -93,7 +160,7 @@ void view_add_scrollbar(struct View *view, int line_count, int offset) {
     char *scrollbar;
     scrollbar = (char*)malloc(10);
     scrollbar[0] = '\0';
-
+    return;
     //printf("%s\n\n", view->window.template);
     printf("%s", view->window.rendered);
     /*printf("%d\n", view->window.geometry.innerWidth);
@@ -121,7 +188,8 @@ void view_add_scrollbar(struct View *view, int line_count, int offset) {
 /**
  * @refactor?
  */
-char * input_stdin_get_raw_with_line_count(int *line_count) {
+//char * input_stdin_get_raw_with_line_count(int *line_count) {
+char * input_stdin_get_raw_with_line_count(void) {
     char *text = (char*)malloc(130000);
     text[0] = '\0';
 
@@ -139,9 +207,9 @@ char * input_stdin_get_raw_with_line_count(int *line_count) {
         /* read from stdin until it's end */
         while ((bytes_read = fread(&buffer, buffer_size, 1, instream)) == buffer_size) {
             text = strcat(text, &buffer[0]);
-            if (buffer[0] == *"\n") {
+            /*if (buffer[0] == *"\n") {
                 *line_count = *line_count + 1;
-            }
+            }*/
         }
     }
     /* if any error occured, exit with an error message */
@@ -149,9 +217,11 @@ char * input_stdin_get_raw_with_line_count(int *line_count) {
         fprintf(stderr, "ERROR opening stdin. aborting.\n");
         exit(1);
     }
-
+//fclose(instream);
     return text;
 }
+
+
 
 void view_add_text(struct View *view, char *text) {
     // get lines
@@ -186,7 +256,7 @@ void view_add_text(struct View *view, char *text) {
     int text_length = strlen(text);
 
     int i;
-    for (i = 0; i < strlen(view->window.template); i++) {
+    for (i = 0; i < strlen(view->window.template); i = i + 1) {
         *template_char = view->window.template[i];
 
         if (*template_char == *VIEW_BLANK_CHAR) {
@@ -222,7 +292,6 @@ void view_add_text(struct View *view, char *text) {
                     }
 
                     if (text_char_i >= strlen(text)) {
-                        printf("K ");
                         break;
                     }
 
@@ -262,20 +331,80 @@ void console_cursor_movo_to(int x, int y) {
     printf("\033[%d;%df", x, y);
 }*/
 
+int input_console_get_key(void) {
+    freopen("/dev/tty", "rw", stdin);
+    int ch;
+    struct termios origterm, tmpterm;
+    
+    tcgetattr(STDIN_FILENO, &origterm);
+    tmpterm = origterm;
+    tmpterm.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr (STDIN_FILENO, TCSANOW, &tmpterm);
+    ch = getchar();
+    
+    int key = 0;
+    
+    if (ch == 27) { // 27 means cursor key
+        getchar();
+        ch = getchar();
+        if (ch == 66) {
+            key = KEY_DOWN;
+        } else if (ch == 65) {
+            key = KEY_UP;
+        }
+    } else if (ch == 81 || ch == 113 || ch == 27) {
+        key = KEY_QUIT;
+    }/* else { // Think of what to do here!
+        key = KEY_QUIT;
+    }*/
+    /*
+    
+    printf("=%d=", ch); // 27 means cursor key
+    // 81 113 mean "q" 27 mean escape
+    ch = getchar();
+    printf("=%d=", ch);
+    ch = getchar();
+    printf("=%d= ", ch); // 66 is down // 65 means up*/
+    tcsetattr (STDIN_FILENO, TCSANOW, &origterm );
+    
+    
+    freopen("/dev/stdin","r", stdin);
+    return key;
+  }
+
 int main(int argc, char **argv) {
     struct View view = view_create(60, 30);
 
+    int key;
     int line_count = 0;
+    int line_offset = 1;
+    int line_start = 0;
+    int line_end = 0;
 
-    char *text = input_stdin_get_raw_with_line_count(&line_count);
+    struct ModelText text = model_text_create(input_stdin_get_raw_with_line_count());
+    text.lines.start = 0;
 
-    //char *text_visibile = "sdfhgsdfgsdfgsghdfgh";
-    char *text_visibile = text;
+    while (true) {
+        model_text_set_visibile(&text);
+
+        view_add_text(&view, text.visibile);
+        view_add_scrollbar(&view, line_count, 0);
+
+        printf("%s", view.window.rendered);
+
+        key = input_console_get_key();
+        if (key == KEY_QUIT) {
+            break;
+        }
+        if (key == KEY_UP && text.lines.offset) {
+            text.lines.offset = text.lines.offset - 1;
+        } else if (key == KEY_DOWN) {
+            text.lines.offset = text.lines.offset + 1;
+        }
+        //printf("_%d_", key);
+    }
     
-    view_add_text(&view, text_visibile);
-    view_add_scrollbar(&view, line_count, 0);
-
-    free(text);
+    //free(text);
 
     /*
     printf("%s", "\n");
