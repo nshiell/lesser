@@ -11,7 +11,7 @@
 #define LINE_BREAK       "\n"
 
 typedef int bool;
-#define true 1
+#define true  1
 #define false 0
 
 #define KEY_QUIT      0
@@ -35,14 +35,11 @@ struct Geometry {
  */
 struct View {
     // The main window box
-    //char *window;
     struct Window {
         char *rendered;
         char *template;
         struct Geometry geometry;
     } window;
-    // The ascii image
-    char *scrollbar;
 };
 
 struct ModelText {
@@ -57,7 +54,6 @@ struct ModelText {
 };
 
 struct ModelText model_text_create(char *raw) {
-    
     struct ModelText text;
     
     int i;
@@ -96,9 +92,6 @@ void model_text_set_visibile(struct ModelText *text) {
             line_breaks_seen = line_breaks_seen + 1;
         }
     }
-    
-    
-    
     //text.lines.offset;
     //text.lines.start
 }
@@ -157,9 +150,7 @@ struct View view_create(int width, int height) {
  * @param view       Will append the scrollbar
  */
 void view_add_scrollbar(struct View *view, struct ModelText *text) {
-    /*char *scrollbar;
-    scrollbar = (char*)malloc(10);
-    scrollbar[0] = '\0';*/
+    /** @todo fix this maths */
     int thumb_size = ((view->window.geometry.innerHeight) / (float) text->lines.count) * (view->window.geometry.innerHeight - 2);
     if (thumb_size > (view->window.geometry.innerHeight - 2)) {
         thumb_size = (view->window.geometry.innerHeight - 2);
@@ -172,7 +163,6 @@ void view_add_scrollbar(struct View *view, struct ModelText *text) {
         thumb_offset = view->window.geometry.innerHeight - thumb_size;
     }
     
-    //printf("%d %d %d", thumb_offset, thumb_size, view->window.geometry.innerHeight);
     char *template_char;
     //template_char = (char*)malloc(1);
     template_char[1];
@@ -180,7 +170,6 @@ void view_add_scrollbar(struct View *view, struct ModelText *text) {
     int last_scroll_Char = -1;
     int thumb_added = 0;
     
-    //printf("%d", thumb_size);
     for (i = 0; i < strlen(view->window.template); i = i + 1) {
         *template_char = view->window.template[i];
         if (*template_char == *VIEW_SCROLL_CHAR) {
@@ -196,38 +185,10 @@ void view_add_scrollbar(struct View *view, struct ModelText *text) {
                 thumb_added++;
             }
             
-            
-            //view->window.rendered[i] = (last_scroll_Chat < 0) ? *"A" : *"0";
             last_scroll_Char = i;
-            //view->window.rendered[i] = *"S";
         }
     }
     view->window.rendered[last_scroll_Char] = *"V";
-    
-    
-    return;
-    //printf("%s\n\n", view->window.template);
-    printf("%s", view->window.rendered);
-    /*printf("%d\n", view->window.geometry.innerWidth);
-    printf("%d\n", line_count);
-    printf("%d\n", line_count);*/
-    /*strcat(scrollbar, "/\\\n");
-    strcat(scrollbar, "##\n");
-    strcat(scrollbar, "##\n");
-    strcat(scrollbar, "##\n");
-    strcat(scrollbar, "##\n");
-    strcat(scrollbar, "\n");
-    strcat(scrollbar, "\n");
-    strcat(scrollbar, "\n");
-    strcat(scrollbar, "\n");
-    strcat(scrollbar, "\n");
-    strcat(scrollbar, "\n");
-    strcat(scrollbar, "\n");
-    strcat(scrollbar, "\\/\n");
-
-    //view->scrollbar = (char*)malloc(10);
-    //view->scrollbar[0] = '\0';
-    view->scrollbar = scrollbar;*/
 }
 
 /**
@@ -388,16 +349,21 @@ int input_console_get_key(void) {
     tmpterm.c_lflag &= ~(ICANON | ECHO);
     tcsetattr (STDIN_FILENO, TCSANOW, &tmpterm);
     ch = getchar();
-    
+    //printf("%d ", ch);
     int key = 0;
     
     if (ch == 27) { // 27 means cursor key
         getchar();
         ch = getchar();
+        //printf("%d ", ch);
         if (ch == 66) {
             key = KEY_DOWN;
         } else if (ch == 65) {
             key = KEY_UP;
+        } else if (ch == 53) {
+            key = KEY_PAGE_UP;
+        } else if (ch == 54) {
+            key = KEY_PAGE_DOWN;
         }
     } else if (ch == 81 || ch == 113 || ch == 27) {
         key = KEY_QUIT;
@@ -420,7 +386,8 @@ int input_console_get_key(void) {
   }
 
 int main(int argc, char **argv) {
-    struct View view = view_create(60, 30);
+    //struct View view = view_create(60, 30);
+    struct View view = view_create(60, 20);
 
     int key;
     int line_count = 0;
@@ -441,25 +408,23 @@ int main(int argc, char **argv) {
             break;
         }
 
-        if (key == KEY_UP && text.lines.offset) {
+        if (key == KEY_PAGE_UP) {
+            text.lines.offset = text.lines.offset - view.window.geometry.innerHeight;
+            if (text.lines.offset < 0) {
+                text.lines.offset = 0;
+            }
+        } else if (key == KEY_PAGE_DOWN) {
+            text.lines.offset = text.lines.offset + view.window.geometry.innerHeight;
+            if (text.lines.offset > text.lines.count - view.window.geometry.innerHeight) {
+                text.lines.offset = text.lines.count - view.window.geometry.innerHeight;
+            }
+        } else if (key == KEY_UP && text.lines.offset) {
             text.lines.offset = text.lines.offset - 1;
         } else if (key == KEY_DOWN && text.lines.offset < text.lines.count - view.window.geometry.innerHeight) {
             text.lines.offset = text.lines.offset + 1;
         }
+
         console_cursor_move_by(view.window.geometry.height - 1, view.window.geometry.width);
-        //printf("_%d_", key);
     }
-    
-    //free(text);
-
-    /*
-    printf("%s", "\n");
-    printf("%s", "HERE BELLOW\n");
-    printf("%s", "\n");
-    printf("%s", "\n");
-
-    printf("%s", view.text);
-    printf("%s", view.scrollbar);*/
-
     return 0;
 }
