@@ -443,10 +443,10 @@ int main(int argc, char **argv) {
 
         if (key == KEY_UP && text.lines.offset) {
             text.lines.offset = text.lines.offset - 1;
-        } else if (key == KEY_DOWN && text.lines.offset < text.lines.count - 28) {
+        } else if (key == KEY_DOWN && text.lines.offset < text.lines.count - view.window.geometry.innerHeight) {
             text.lines.offset = text.lines.offset + 1;
         }
-        console_cursor_move_by(29, 60);
+        console_cursor_move_by(view.window.geometry.height - 1, view.window.geometry.width);
         //printf("_%d_", key);
     }
     
