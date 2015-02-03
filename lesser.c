@@ -5,9 +5,10 @@
 #include <unistd.h>
 #include <termios.h>
 
-#define BUFFERSIZE    1
-#define VIEW_BLANK_CHAR "X"
-#define LINE_BREAK "\n"
+#define BUFFERSIZE       1
+#define VIEW_BLANK_CHAR  "X"
+#define VIEW_SCROLL_CHAR "Y"
+#define LINE_BREAK       "\n"
 
 typedef int bool;
 #define true 1
@@ -114,13 +115,14 @@ struct View view_create(int width, int height) {
     spaces[0] = '\0';
 
     int i;
-    for (i = 0; i < width - 2 - 2; i++) {
+    for (i = 0; i < width - 1 - 2; i++) {
         strcat(spaces, VIEW_BLANK_CHAR);
     }
 
-    strcat(spaces, "YY");
+    strcat(spaces, VIEW_SCROLL_CHAR);
     
-    for (i = 0; i < width; i++) {
+    strcat(win, " ");
+    for (i = 0; i < width - 2; i++) {
         strcat(win, "_");
     }
 
@@ -132,11 +134,11 @@ struct View view_create(int width, int height) {
         strcat(win, "|\n");
     }
     
-    strcat(win, "|");
+    strcat(win, "'");
     for (i = 0; i < width - 2; i++) {
-        strcat(win, "_");
+        strcat(win, "-");
     }
-    strcat(win, "|");
+    strcat(win, "'");
     
     struct View view;
     view.window.rendered = (char*)malloc(3000);
@@ -153,20 +155,63 @@ struct View view_create(int width, int height) {
 /**
  * Will append a scrollbar to the right of the window
  * @param view       Will append the scrollbar
- * @param line_count How many lines are there?
- * @param offset     Which line are we scrolled too?
  */
-void view_add_scrollbar(struct View *view, int line_count, int offset) {
-    char *scrollbar;
+void view_add_scrollbar(struct View *view, struct ModelText *text) {
+    /*char *scrollbar;
     scrollbar = (char*)malloc(10);
-    scrollbar[0] = '\0';
+    scrollbar[0] = '\0';*/
+    int thumb_size = ((view->window.geometry.innerHeight) / (float) text->lines.count) * (view->window.geometry.innerHeight - 2);
+    if (thumb_size > (view->window.geometry.innerHeight - 2)) {
+        thumb_size = (view->window.geometry.innerHeight - 2);
+    } else if (!thumb_size) {
+        thumb_size = 1;
+    }
+
+    int thumb_offset = (text->lines.offset / (float) text->lines.count) * (view->window.geometry.innerHeight);
+    if (thumb_offset > view->window.geometry.innerHeight - thumb_size) {
+        thumb_offset = view->window.geometry.innerHeight - thumb_size;
+    }
+    
+    //printf("%d %d %d", thumb_offset, thumb_size, view->window.geometry.innerHeight);
+    char *template_char;
+    //template_char = (char*)malloc(1);
+    template_char[1];
+    int i;
+    int last_scroll_Char = -1;
+    int thumb_added = 0;
+    
+    //printf("%d", thumb_size);
+    for (i = 0; i < strlen(view->window.template); i = i + 1) {
+        *template_char = view->window.template[i];
+        if (*template_char == *VIEW_SCROLL_CHAR) {
+            if (last_scroll_Char < 0) {
+                view->window.rendered[i] = *"A";
+            } else if (thumb_offset) {
+                view->window.rendered[i] = *" ";
+                thumb_offset--;
+            } else if (thumb_added > thumb_size) {
+                view->window.rendered[i] = *" ";
+            } else {
+                view->window.rendered[i] = *"*";
+                thumb_added++;
+            }
+            
+            
+            //view->window.rendered[i] = (last_scroll_Chat < 0) ? *"A" : *"0";
+            last_scroll_Char = i;
+            //view->window.rendered[i] = *"S";
+        }
+    }
+    view->window.rendered[last_scroll_Char] = *"V";
+    
+    
     return;
     //printf("%s\n\n", view->window.template);
     printf("%s", view->window.rendered);
     /*printf("%d\n", view->window.geometry.innerWidth);
     printf("%d\n", line_count);
     printf("%d\n", line_count);*/
-    strcat(scrollbar, "/\\\n");
+    /*strcat(scrollbar, "/\\\n");
     strcat(scrollbar, "##\n");
     strcat(scrollbar, "##\n");
     strcat(scrollbar, "##\n");
@@ -182,7 +227,7 @@ void view_add_scrollbar(struct View *view, int line_count, int offset) {
 
     //view->scrollbar = (char*)malloc(10);
     //view->scrollbar[0] = '\0';
-    view->scrollbar = scrollbar;
+    view->scrollbar = scrollbar;*/
 }
 
 /**
@@ -281,9 +326,9 @@ void view_add_text(struct View *view, char *text) {
             }
         } else if (*template_char == *LINE_BREAK) {
             if (!end_of_line_found && start_of_line_added) {
+                text_lines[strlen(text_lines) - 3] = *".";
                 text_lines[strlen(text_lines) - 4] = *".";
                 text_lines[strlen(text_lines) - 5] = *".";
-                text_lines[strlen(text_lines) - 6] = *".";
 
                 while (true) {
                     if (text[text_char_i] == *LINE_BREAK) {
@@ -326,10 +371,12 @@ void view_add_text(struct View *view, char *text) {
     }*/
 }
 
-/*
-void console_cursor_movo_to(int x, int y) {
-    printf("\033[%d;%df", x, y);
-}*/
+
+void console_cursor_move_by(int x, int y) {
+    //printf("\033[%d;%df", x, y);
+    printf("\033[%dA", x);
+    printf("\033[%dD", y);
+}
 
 int input_console_get_key(void) {
     freopen("/dev/tty", "rw", stdin);
@@ -377,9 +424,6 @@ int main(int argc, char **argv) {
 
     int key;
     int line_count = 0;
-    int line_offset = 1;
-    int line_start = 0;
-    int line_end = 0;
 
     struct ModelText text = model_text_create(input_stdin_get_raw_with_line_count());
     text.lines.start = 0;
@@ -388,7 +432,7 @@ int main(int argc, char **argv) {
         model_text_set_visibile(&text);
 
         view_add_text(&view, text.visibile);
-        view_add_scrollbar(&view, line_count, 0);
+        view_add_scrollbar(&view, &text);
 
         printf("%s", view.window.rendered);
 
@@ -396,11 +440,13 @@ int main(int argc, char **argv) {
         if (key == KEY_QUIT) {
             break;
         }
+
         if (key == KEY_UP && text.lines.offset) {
             text.lines.offset = text.lines.offset - 1;
-        } else if (key == KEY_DOWN) {
+        } else if (key == KEY_DOWN && text.lines.offset < text.lines.count - 28) {
             text.lines.offset = text.lines.offset + 1;
         }
+        console_cursor_move_by(29, 60);
         //printf("_%d_", key);
     }
     
