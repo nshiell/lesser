@@ -386,8 +386,20 @@ int input_console_get_key(void) {
   }
 
 int main(int argc, char **argv) {
+    int index;
+    int width = 60;
+    int height = 20;
+    
+    //printf("%d", atoi(argv[1]));
+    if (argc > 1) {
+        width = atoi(argv[1]);
+    }
+    if (argc > 2) {
+        height = atoi(argv[2]);
+    }
+
     //struct View view = view_create(60, 30);
-    struct View view = view_create(60, 20);
+    struct View view = view_create(width, height);
 
     int key;
     int line_count = 0;
