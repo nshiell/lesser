@@ -11,13 +11,15 @@
 #define VIEW_SCROLL_CHAR "Y"
 #define LINE_BREAK       "\n"
 
-#define GEOMETERY_WINDOW_WIDTH_MIN  10
-#define GEOMETERY_WINDOW_WIDTH_MAX  150
-#define GEOMETERY_WINDOW_WIDTH_HINTS  99
+#define GEOMETERY_WINDOW_WIDTH_MIN      10
+#define GEOMETERY_WINDOW_WIDTH_MAX      150
+#define GEOMETERY_WINDOW_WIDTH_HINTS    99
+#define GEOMETERY_WINDOW_WIDTH_DEFAULT  60
 
-#define GEOMETERY_WINDOW_HEIGHT_MIN 4
-#define GEOMETERY_WINDOW_HEIGHT_MAX 60
-#define GEOMETERY_WINDOW_HEIGHT_HINTS 24
+#define GEOMETERY_WINDOW_HEIGHT_MIN     4
+#define GEOMETERY_WINDOW_HEIGHT_MAX     60
+#define GEOMETERY_WINDOW_HEIGHT_HINTS   24
+#define GEOMETERY_WINDOW_HEIGHT_DEFAULT 20
 
 #define STREAM_PATH_DEFAULT  "/dev/stdin"
 
@@ -54,6 +56,9 @@ typedef int bool;
 #define KEY_PAGE_UP   3
 #define KEY_PAGE_DOWN 4
 
+/**
+ * Used for representing the dimentions of something
+ */
 struct Geometry {
     int x;
     int y;
@@ -76,6 +81,9 @@ struct View {
     } window;
 };
 
+/**
+ * For modeling text, raw text, number of lines etc
+ */
 struct ModelText {
     struct Lines {
         int count;
@@ -87,6 +95,9 @@ struct ModelText {
     char *visibile;
 };
 
+/**
+ * For creating a ModelText
+ */
 struct ModelText model_text_create(char *raw) {
     struct ModelText text;
     
@@ -106,6 +117,10 @@ struct ModelText model_text_create(char *raw) {
     return text;
 }
 
+/**
+ * Adds a substring of visibile text into ModelText->visibile
+ * @todo check that is doesn't add in too much text
+ */
 void model_text_set_visibile(struct ModelText *text) {
     int i;
     int line_breaks_seen = 0;
@@ -132,7 +147,8 @@ void model_text_set_visibile(struct ModelText *text) {
 
 /**
  * Will create a view
- * Basically the window geometery empty (with spaces)
+ * Will create a View, with a blank tenplate, the area where text
+ * and scrollbars will appear have placeholder chars
  */
 struct View view_create(int width, int height) {
     char *win;
@@ -153,7 +169,7 @@ struct View view_create(int width, int height) {
         strcat(win, "_");
     }
 
-    win = strcat(win, "\n");
+    win = strcat(win, LINE_BREAK);
 
     for (i = 0; i < height - 2; i++) {
         strcat(win, "|");
@@ -225,6 +241,10 @@ void view_add_scrollbar(struct View *view, struct ModelText *text) {
     view->window.rendered[last_scroll_Char] = *"V";
 }
 
+/**
+ * Will read chars from the FILE passed in untill it becomes NULL
+ * Will error to stderror if can't open file
+ */
 char * input_stdin_get_raw_with_line_count(FILE *instream) {
     char *text = (char*)malloc(130000);
     text[0] = '\0';
@@ -257,8 +277,11 @@ char * input_stdin_get_raw_with_line_count(FILE *instream) {
     return text;
 }
 
-
-
+/**
+ * Will add some text to the window, replacing the placeholder chars
+ * Will not do scrollbars
+ * If too much text given, the extra won't show
+ */
 void view_add_text(struct View *view, char *text) {
     // get lines
     // *text
@@ -271,56 +294,77 @@ void view_add_text(struct View *view, char *text) {
 
     //char (char*)malloc((view->window.geometry.height + 1) * (view->window.geometry.innerWidth + 1));    
     char *text_lines = (char*)malloc(130000);
+
+    // Hold the current char from the text
     char *text_char;
     text_char = (char*)malloc(1);
 
+    // Hold the current char from the template
     char *template_char;
     template_char = (char*)malloc(1);
 
+    // Offset of the text char we have
     int text_char_i;
     text_char_i = 0;
 
-    // Loop over view template line by line
-    int row_no;
-    int col_no;
-    row_no = 0;
-    col_no = 0;
-
+    // This is important to calculate weather we should truncate the line with "..."
     bool end_of_line_found = false;
+    // Have we actually added any text for this line?
+    // (this might be false if the innerHeight > line count)
     bool start_of_line_added = false;
 
+    // Usefull for adding in spaces after we have added all text in
+    // (this might be false if the innerHeight > line count)
     int text_length = strlen(text);
 
+    // Walk over each char in the template replacing with text or "." or a space
     int i;
-    for (i = 0; i < strlen(view->window.template); i = i + 1) {
+    for (i = 0; i < strlen(view->window.template); i++) {
         *template_char = view->window.template[i];
 
+        // This char *should* be replaced
         if (*template_char == *VIEW_BLANK_CHAR) {
+            // We have no more text to add in for this line, add in spaces
             if (end_of_line_found || text_char_i >= text_length) {
                 *text_char = *" ";
                 strcat(text_lines, text_char);
             } else {
                 *text_char = text[text_char_i];
+                // The char we have in text is a newline,
+                // but the template wants a normal printed char use a space
+                // and mark that we encountered an EOL in text
                 if (*text_char == *LINE_BREAK) {
                     end_of_line_found = true;
                     *text_char = *" ";
+                // The char is a control char, ewww, forget it and move the template
+                // char back one so we can put a proper char in ths template char next itteration!
                 } else if ((int) *text_char < 32) {
                     text_char_i = text_char_i + 1;
                     i = i -1;
                     continue;
                 } else {
+                    // We are adding an actual char, make sure we
+                    // know we have started adding this line, we need this for truncation
                     start_of_line_added = true;
                 }
 
+                // Add the text char into the concatinated output,
+                // both text chars and tempalate can be in text_char
+                // ...and make sure we try and read the next char next time
                 strcat(text_lines, text_char);
-                text_char_i = text_char_i + 1;
+                text_char_i++;
             }
+        // Template EOL
         } else if (*template_char == *LINE_BREAK) {
+            // We have an incomplete line, then add in the "." 3, 4 and 5th char BEHIND here
+            /** @todo think about this! */
             if (!end_of_line_found && start_of_line_added) {
                 text_lines[strlen(text_lines) - 3] = *".";
                 text_lines[strlen(text_lines) - 4] = *".";
                 text_lines[strlen(text_lines) - 5] = *".";
 
+                // Push text_char_i upto the EOL so that the next line starts at the correct place
+                // so truncation occurs
                 while (true) {
                     if (text[text_char_i] == *LINE_BREAK) {
                         text_char_i = text_char_i + 1;
@@ -335,40 +379,34 @@ void view_add_text(struct View *view, char *text) {
                 }
                 
             }
+            // Reset stuff for next line to work correctly
             end_of_line_found = false;
             start_of_line_added = false;
-            strcat(text_lines, "\n");
+            // And add in the actual newline into the text
+            strcat(text_lines, template_char);
         } else {
             strcat(text_lines, template_char);
         }
     }
+
     view->window.rendered = text_lines;
-
-    // count number of X in the first line
-    //    if count X == 0, no text here
-    //        Put each char into the return
-    //    else if count X < line length, then line too long == true
-
-    // Loop over chars in template if X
-    // replace with char, else leave
-    /*
-    int i;
-    char x[] = "123456";
-    
-    view.window.template
-    
-    for (i = 0; i < strlen(x); i++) {
-        printf("%c\n", x[i]);
-    }*/
 }
 
-
+/**
+ * Move the consoles cursor up and left
+ * @param int x how many spaces left
+ * @param int y how many spaces up
+ */
 void console_cursor_move_by(int x, int y) {
     //printf("\033[%d;%df", x, y);
     printf("\033[%dA", x);
     printf("\033[%dD", y);
 }
 
+/**
+ * Returns one of KEY_QUIT, KEY_DOWN, KEY_UP, KEY_PAGE_UP, KEY_PAGE_DOWN
+ * This reads /dev/tty directly as we are using /dev/stdin for getting raw text
+ */
 int input_console_get_key(void) {
     freopen("/dev/tty", "rw", stdin);
     int ch;
@@ -379,7 +417,7 @@ int input_console_get_key(void) {
     tmpterm.c_lflag &= ~(ICANON | ECHO);
     tcsetattr (STDIN_FILENO, TCSANOW, &tmpterm);
     ch = getchar();
-    //printf("%d ", ch);
+
     int key = 0;
     
     if (ch == 27) { // 27 means cursor key
@@ -406,32 +444,46 @@ int input_console_get_key(void) {
     }*/
 
     tcsetattr (STDIN_FILENO, TCSANOW, &origterm );
-    
-    
+        
     freopen("/dev/stdin","r", stdin);
     return key;
 }
 
+/**
+ * Concatinates PROGRAM_LESSER_DESCRIPTION a new line and PROGRAM_LESSER_HINTS
+ * Useful hints on the program
+ */
 char * program_hints_get() {
     char *hints = (char*)malloc(130000);
     hints[0] = '\0';
     strcat(hints, PROGRAM_LESSER_DESCRIPTION);
-    strcat(hints, "\n");
+    strcat(hints, LINE_BREAK);
     strcat(hints, PROGRAM_LESSER_HINTS);
 
     return hints;
 }
 
+/**
+ * Prints out standard unix usage text
+ */
 void console_usage_print() {
     printf(PROGRAM_LESSER_DESCRIPTION);
 }
 
+/**
+ * Reads from argv
+ * @param argc count of args
+ * @param argv char array of args
+ * @param stream_path will be the file path passed in else STREAM_PATH_DEFAULT
+ * @param width will be the width(if passed)
+ * @param height will be the height (if passed)
+ */
 void console_parse_geometery_stream_path(int argc, char **argv, int *width, int *height, bool *is_help, char **stream_path) {
     int opt = 0;
 
     //Specifying the expected options
     static struct option long_options[] = {
-        // Ags are actually optional
+        // Ags are actually all optional
         {"help",     no_argument,       0,  'e' },
         {"width",    required_argument, 0,  'w' },
         {"height",   required_argument, 0,  'h' },
@@ -453,6 +505,7 @@ void console_parse_geometery_stream_path(int argc, char **argv, int *width, int 
         }
     }
 
+    // Sane bounds areound width and height
     if (*width < GEOMETERY_WINDOW_WIDTH_MIN) {
         *width = GEOMETERY_WINDOW_WIDTH_MIN;
     } else if (*width > GEOMETERY_WINDOW_WIDTH_MAX) {
@@ -464,7 +517,8 @@ void console_parse_geometery_stream_path(int argc, char **argv, int *width, int 
     } else if (*height > GEOMETERY_WINDOW_HEIGHT_MAX) {
         *height = GEOMETERY_WINDOW_HEIGHT_MAX;
     }
-    
+
+    // Add in file path
     *stream_path = STREAM_PATH_DEFAULT;
     
     if (optind < argc) {
@@ -475,40 +529,46 @@ void console_parse_geometery_stream_path(int argc, char **argv, int *width, int 
 }
 
 int main(int argc, char **argv) {
-    int width = 60;
-    int height = 20;
+    // DEfault values
+    int width = GEOMETERY_WINDOW_WIDTH_DEFAULT;
+    int height = GEOMETERY_WINDOW_HEIGHT_DEFAULT;
     bool is_help = false;
 
     char *stream_path;
     stream_path = (char*)malloc(100);
+    // Populate vars with values from args
     console_parse_geometery_stream_path(argc, argv, &width, &height, &is_help, &stream_path);
 
-    char *raw = (char*)malloc(130000);
+    // Populate raw_text with standard in, file load, or hints
+    char *text_raw = (char*)malloc(130000);
     
     if (is_help) {
-        raw = program_hints_get();
+        // Get hints as input, andd set the dimentions
+        text_raw = program_hints_get();
         width = GEOMETERY_WINDOW_WIDTH_HINTS;
         height = GEOMETERY_WINDOW_HEIGHT_HINTS;
     } else {
-        FILE *instream = fopen(stream_path,"r");
-        raw = input_stdin_get_raw_with_line_count(instream);
+        // Take the stream path /dev/stdin or a file and get text from it
+        FILE *instream = fopen(stream_path, "r");
+        text_raw = input_stdin_get_raw_with_line_count(instream);
     }
 
-    
+    // Create a vew, for holding templates, rendered view etc
     struct View view = view_create(width, height);
 
-    int key;
-    int line_count = 0;
-
-    struct ModelText text = model_text_create(raw);
+    struct ModelText text = model_text_create(text_raw);
     text.lines.start = 0;
 
+    // Main loop, draws the window, then awaits key press
+    int key;
     while (true) {
         model_text_set_visibile(&text);
 
         view_add_text(&view, text.visibile);
         view_add_scrollbar(&view, &text);
 
+        // Main print of the rendered template
+        // Apart from errors this is the only print!
         printf("%s", view.window.rendered);
 
         key = input_console_get_key();
@@ -532,7 +592,9 @@ int main(int argc, char **argv) {
             text.lines.offset = text.lines.offset + 1;
         }
 
+        // Move the cursor back up so we overprint the window, giving the illustion of a scroll
         console_cursor_move_by(view.window.geometry.height - 1, view.window.geometry.width);
     }
+
     return 0;
 }
