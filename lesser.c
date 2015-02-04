@@ -13,9 +13,11 @@
 
 #define GEOMETERY_WINDOW_WIDTH_MIN  10
 #define GEOMETERY_WINDOW_WIDTH_MAX  150
+#define GEOMETERY_WINDOW_WIDTH_HINTS  99
 
 #define GEOMETERY_WINDOW_HEIGHT_MIN 4
 #define GEOMETERY_WINDOW_HEIGHT_MAX 60
+#define GEOMETERY_WINDOW_HEIGHT_HINTS 24
 
 #define STREAM_PATH_DEFAULT  "/dev/stdin"
 
@@ -480,24 +482,24 @@ int main(int argc, char **argv) {
     char *stream_path;
     stream_path = (char*)malloc(100);
     console_parse_geometery_stream_path(argc, argv, &width, &height, &is_help, &stream_path);
+
+    char *raw = (char*)malloc(130000);
+    
+    if (is_help) {
+        raw = program_hints_get();
+        width = GEOMETERY_WINDOW_WIDTH_HINTS;
+        height = GEOMETERY_WINDOW_HEIGHT_HINTS;
+    } else {
+        FILE *instream = fopen(stream_path,"r");
+        raw = input_stdin_get_raw_with_line_count(instream);
+    }
+
     
     struct View view = view_create(width, height);
 
     int key;
     int line_count = 0;
 
-    FILE *instream = fopen(stream_path,"r");
-
-    char *raw = (char*)malloc(130000);
-    //text[0] = '\0';
-    
-    char hints[4000] = PROGRAM_LESSER_DESCRIPTION;
-    strcat(hints, "\n");
-    strcat(hints, PROGRAM_LESSER_HINTS);
-    
-    raw = (is_help) ? program_hints_get() : input_stdin_get_raw_with_line_count(instream);
-    //PROGRAM_LESSER_HINTS
-    
     struct ModelText text = model_text_create(raw);
     text.lines.start = 0;
 
