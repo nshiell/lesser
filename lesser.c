@@ -4,11 +4,43 @@
 
 #include <unistd.h>
 #include <termios.h>
+#include <getopt.h>
 
 #define BUFFERSIZE       1
 #define VIEW_BLANK_CHAR  "X"
 #define VIEW_SCROLL_CHAR "Y"
 #define LINE_BREAK       "\n"
+
+#define GEOMETERY_WINDOW_WIDTH_MIN  10
+#define GEOMETERY_WINDOW_WIDTH_MAX  150
+
+#define GEOMETERY_WINDOW_HEIGHT_MIN 4
+#define GEOMETERY_WINDOW_HEIGHT_MAX 60
+
+#define STREAM_PATH_DEFAULT  "/dev/stdin"
+
+#define PROGRAM_LESSER_DESCRIPTION "Usage: [PIPE FROM STDIN |] lesser [FILE] [OPTION] \n\
+\n\
+A program that allows you to view files and other streams (from stdin) in a scrollable manner.\n\
+You can use this program in a similar way to less although this program is *far* less advanced,\n\
+and for now is just an experimant into writing programs in c. \n\
+\n\
+Options:\n\
+  -w, --width <number>     Width of the window\n\
+  -h, --height <number>    Height of the window\n\
+  -e, --help               Show some help\n"
+
+#define PROGRAM_LESSER_HINTS "When running the program you can see a scrollbar on the right\n\
+to show how far down the page you are.\n\
+press space, or down arrow or enter to see the next line\n\
+press up to go up one line\n\
+press enter or page down to jump down one screen (window's worth of text)\n\
+press page up ti go up one screen\n\
+press q or any other quy to quit.\n\
+Written by Nicholas Shiell (NShiell), please feel free to hack the sourcecode yourself,\n\
+but if you do please let me have your work.\n\
+\n\
+This is licenced under the terms of the GNU GPLv3." 
 
 typedef int bool;
 #define true  1
@@ -191,22 +223,18 @@ void view_add_scrollbar(struct View *view, struct ModelText *text) {
     view->window.rendered[last_scroll_Char] = *"V";
 }
 
-/**
- * @refactor?
- */
-//char * input_stdin_get_raw_with_line_count(int *line_count) {
-char * input_stdin_get_raw_with_line_count(void) {
+char * input_stdin_get_raw_with_line_count(FILE *instream) {
     char *text = (char*)malloc(130000);
     text[0] = '\0';
 
     unsigned char buffer[BUFFERSIZE];
-    FILE *instream;
+    //FILE *instream;
     int bytes_read = 0;
     int buffer_size = 0;
 
     buffer_size = sizeof(unsigned char) * BUFFERSIZE;
     /* open stdin for reading */
-    instream = fopen("/dev/stdin","r");
+    //instream = fopen("/dev/stdin","r");
 
     /* did it open? */
     if(instream != NULL) {
@@ -365,46 +393,112 @@ int input_console_get_key(void) {
         } else if (ch == 54) {
             key = KEY_PAGE_DOWN;
         }
-    } else if (ch == 81 || ch == 113 || ch == 27) {
-        key = KEY_QUIT;
+//    } else if (ch == 81 || ch == 113 || ch == 27) {
+//        key = KEY_QUIT;
+    } else if (ch == 32) { // space
+        key = KEY_PAGE_DOWN;
+    } else if (ch == 10) { // enter
+        key = KEY_DOWN;
     }/* else { // Think of what to do here!
         key = KEY_QUIT;
     }*/
-    /*
-    
-    printf("=%d=", ch); // 27 means cursor key
-    // 81 113 mean "q" 27 mean escape
-    ch = getchar();
-    printf("=%d=", ch);
-    ch = getchar();
-    printf("=%d= ", ch); // 66 is down // 65 means up*/
+
     tcsetattr (STDIN_FILENO, TCSANOW, &origterm );
     
     
     freopen("/dev/stdin","r", stdin);
     return key;
-  }
+}
+
+char * program_hints_get() {
+    char *hints = (char*)malloc(130000);
+    hints[0] = '\0';
+    strcat(hints, PROGRAM_LESSER_DESCRIPTION);
+    strcat(hints, "\n");
+    strcat(hints, PROGRAM_LESSER_HINTS);
+
+    return hints;
+}
+
+void console_usage_print() {
+    printf(PROGRAM_LESSER_DESCRIPTION);
+}
+
+void console_parse_geometery_stream_path(int argc, char **argv, int *width, int *height, bool *is_help, char **stream_path) {
+    int opt = 0;
+
+    //Specifying the expected options
+    static struct option long_options[] = {
+        // Ags are actually optional
+        {"help",     no_argument,       0,  'e' },
+        {"width",    required_argument, 0,  'w' },
+        {"height",   required_argument, 0,  'h' },
+        {0,           0,                 0,  0   }
+    };
+
+    int long_index = 0;
+    while ((opt = getopt_long(argc, argv,"w:h:", 
+                  long_options, &long_index )) != -1) {
+        switch (opt) {
+            case 'e': *is_help = true;
+                break;
+            case 'h' : *height = atoi(optarg);
+                break;
+            case 'w' : *width = atoi(optarg);
+                break;
+            default: console_usage_print();
+                exit(EXIT_FAILURE);
+        }
+    }
+
+    if (*width < GEOMETERY_WINDOW_WIDTH_MIN) {
+        *width = GEOMETERY_WINDOW_WIDTH_MIN;
+    } else if (*width > GEOMETERY_WINDOW_WIDTH_MAX) {
+        *width = GEOMETERY_WINDOW_WIDTH_MAX;
+    }
+
+    if (*height < GEOMETERY_WINDOW_HEIGHT_MIN) {
+        *height = GEOMETERY_WINDOW_HEIGHT_MIN;
+    } else if (*height > GEOMETERY_WINDOW_HEIGHT_MAX) {
+        *height = GEOMETERY_WINDOW_HEIGHT_MAX;
+    }
+    
+    *stream_path = STREAM_PATH_DEFAULT;
+    
+    if (optind < argc) {
+        while (optind < argc) {
+            *stream_path = argv[optind++];
+        }
+    }
+}
 
 int main(int argc, char **argv) {
-    int index;
     int width = 60;
     int height = 20;
-    
-    //printf("%d", atoi(argv[1]));
-    if (argc > 1) {
-        width = atoi(argv[1]);
-    }
-    if (argc > 2) {
-        height = atoi(argv[2]);
-    }
+    bool is_help = false;
 
-    //struct View view = view_create(60, 30);
+    char *stream_path;
+    stream_path = (char*)malloc(100);
+    console_parse_geometery_stream_path(argc, argv, &width, &height, &is_help, &stream_path);
+    
     struct View view = view_create(width, height);
 
     int key;
     int line_count = 0;
 
-    struct ModelText text = model_text_create(input_stdin_get_raw_with_line_count());
+    FILE *instream = fopen(stream_path,"r");
+
+    char *raw = (char*)malloc(130000);
+    //text[0] = '\0';
+    
+    char hints[4000] = PROGRAM_LESSER_DESCRIPTION;
+    strcat(hints, "\n");
+    strcat(hints, PROGRAM_LESSER_HINTS);
+    
+    raw = (is_help) ? program_hints_get() : input_stdin_get_raw_with_line_count(instream);
+    //PROGRAM_LESSER_HINTS
+    
+    struct ModelText text = model_text_create(raw);
     text.lines.start = 0;
 
     while (true) {
