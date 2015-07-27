@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <getopt.h>
+#include <sys/ioctl.h>
 
 #define BUFFERSIZE       1
 #define VIEW_BLANK_CHAR  "X"
@@ -529,9 +530,14 @@ void console_parse_geometery_stream_path(int argc, char **argv, int *width, int 
 }
 
 int main(int argc, char **argv) {
-    // DEfault values
-    int width = GEOMETERY_WINDOW_WIDTH_DEFAULT;
-    int height = GEOMETERY_WINDOW_HEIGHT_DEFAULT;
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+
+    // Default values
+    //int width = GEOMETERY_WINDOW_WIDTH_DEFAULT;
+    int width = w.ws_col;
+    //int height = GEOMETERY_WINDOW_HEIGHT_DEFAULT;
+    int height = w.ws_row / 2;
     bool is_help = false;
 
     char *stream_path;
