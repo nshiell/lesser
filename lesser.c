@@ -403,7 +403,7 @@ void console_cursor_move_by(int x, int y) {
     printf("\033[%dA", x);
     printf("\033[%dD", y);
 }
-
+struct termios origterm, tmpterm;
 /**
  * Returns one of KEY_QUIT, KEY_DOWN, KEY_UP, KEY_PAGE_UP, KEY_PAGE_DOWN
  * This reads /dev/tty directly as we are using /dev/stdin for getting raw text
@@ -411,12 +411,8 @@ void console_cursor_move_by(int x, int y) {
 int input_console_get_key(void) {
     freopen("/dev/tty", "rw", stdin);
     int ch;
-    struct termios origterm, tmpterm;
-    
-    tcgetattr(STDIN_FILENO, &origterm);
-    tmpterm = origterm;
-    tmpterm.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr (STDIN_FILENO, TCSANOW, &tmpterm);
+    //struct termios origterm, tmpterm;
+
     ch = getchar();
 
     int key = 0;
@@ -444,10 +440,23 @@ int input_console_get_key(void) {
         key = KEY_QUIT;
     }*/
 
-    tcsetattr (STDIN_FILENO, TCSANOW, &origterm );
+    //tcsetattr (STDIN_FILENO, TCSANOW, &origterm );
         
-    freopen("/dev/stdin","r", stdin);
+    //freopen("/dev/stdin","r", stdin);
     return key;
+}
+
+void input_console_disable_char(void) {
+    freopen("/dev/tty", "rw", stdin);
+    tcgetattr(STDIN_FILENO, &origterm);
+    tmpterm = origterm;
+    tmpterm.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr (STDIN_FILENO, TCSANOW, &tmpterm);
+}
+
+void input_console_enable_char(void) {
+    freopen("/dev/tty", "rw", stdin);
+    tcsetattr (STDIN_FILENO, TCSANOW, &origterm );
 }
 
 /**
@@ -566,8 +575,10 @@ int main(int argc, char **argv) {
     text.lines.start = 0;
 
     // Main loop, draws the window, then awaits key press
-    int key;
+    int key = KEY_QUIT;
+
     while (true) {
+        input_console_disable_char();
         model_text_set_visibile(&text);
 
         view_add_text(&view, text.visibile);
@@ -578,6 +589,8 @@ int main(int argc, char **argv) {
         printf("%s", view.window.rendered);
 
         key = input_console_get_key();
+        input_console_enable_char();
+
         if (key == KEY_QUIT) {
             break;
         }
