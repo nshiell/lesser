@@ -263,6 +263,10 @@ char * input_stdin_get_raw_with_line_count(FILE *instream) {
     if(instream != NULL) {
         /* read from stdin until it's end */
         while ((bytes_read = fread(&buffer, buffer_size, 1, instream)) == buffer_size) {
+            // Not sure how accurate this is!
+            if (strlen(text) == 130000) {
+                break;
+            }
             text = strcat(text, &buffer[0]);
             /*if (buffer[0] == *"\n") {
                 *line_count = *line_count + 1;
@@ -507,10 +511,10 @@ void console_parse_geometery_stream_path(int argc, char **argv, int *width, int 
     //Specifying the expected options
     static struct option long_options[] = {
         // Ags are actually all optional
-        {"help",     no_argument,       0,  'e' },
-        {"width",    required_argument, 0,  'w' },
-        {"height",   required_argument, 0,  'h' },
-        {0,           0,                 0,  0   }
+        {"help",     no_argument,       0,  'e'},
+        {"width",    required_argument, 0,  'w'},
+        {"height",   required_argument, 0,  'h'},
+        {0,          0,                 0,   0 }
     };
 
     int long_index = 0;
@@ -552,7 +556,6 @@ void console_parse_geometery_stream_path(int argc, char **argv, int *width, int 
 }
 
 int main(int argc, char **argv) {
-
     bool is_help = false;
 
     int width = 0;
