@@ -31,7 +31,7 @@ You can use this program in a similar way to less although this program is *far*
 and for now is just an experimant into writing programs in c. \n\
 \n\
 Options:\n\
-  -w, --width <number>     Width of the window\n\
+  -w, --width  <number>    Width of the window\n\
   -h, --height <number>    Height of the window\n\
   -e, --help               Show some help\n"
 
@@ -40,8 +40,8 @@ to show how far down the page you are.\n\
 press space, or down arrow or enter to see the next line\n\
 press up to go up one line\n\
 press enter or page down to jump down one screen (window's worth of text)\n\
-press page up ti go up one screen\n\
-press q or any other quy to quit.\n\
+press page up to go up one screen\n\
+press q or any other key to quit.\n\
 Written by Nicholas Shiell (NShiell), please feel free to hack the sourcecode yourself,\n\
 but if you do please let me have your work.\n\
 \n\
@@ -480,6 +480,17 @@ void console_usage_print() {
     printf(PROGRAM_LESSER_DESCRIPTION);
 }
 
+void console_get_dimensions(int *width, int *height) {
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+
+    // Default values
+    //int width = GEOMETERY_WINDOW_WIDTH_DEFAULT;
+    *width = w.ws_col;
+    //int height = GEOMETERY_WINDOW_HEIGHT_DEFAULT;
+    *height = w.ws_row / 2;
+}
+
 /**
  * Reads from argv
  * @param argc count of args
@@ -491,6 +502,8 @@ void console_usage_print() {
 void console_parse_geometery_stream_path(int argc, char **argv, int *width, int *height, bool *is_help, char **stream_path) {
     int opt = 0;
 
+    console_get_dimensions(width, height);
+    
     //Specifying the expected options
     static struct option long_options[] = {
         // Ags are actually all optional
@@ -539,16 +552,12 @@ void console_parse_geometery_stream_path(int argc, char **argv, int *width, int 
 }
 
 int main(int argc, char **argv) {
-    struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 
-    // Default values
-    //int width = GEOMETERY_WINDOW_WIDTH_DEFAULT;
-    int width = w.ws_col;
-    //int height = GEOMETERY_WINDOW_HEIGHT_DEFAULT;
-    int height = w.ws_row / 2;
     bool is_help = false;
 
+    int width = 0;
+    int height = 0;
+    
     char *stream_path;
     stream_path = (char*)malloc(100);
     // Populate vars with values from args
