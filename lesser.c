@@ -122,14 +122,14 @@ struct ModelText model_text_create(char *raw) {
  * Adds a substring of visibile text into ModelText->visibile
  * @todo check that is doesn't add in too much text
  */
-void model_text_set_visibile(struct ModelText *text) {
+void model_text_set_visibile(struct ModelText *text, int innerHright) {
     int i;
     int line_breaks_seen = 0;
     text->visibile = (char*)malloc(130000);
     text->visibile[0] = '\0';
 
-    char *r = (char*)malloc(130000);
-    r[0] = '\0';
+    //char *r = (char*)malloc(130000);
+    //r[0] = '\0';
     
     for (i = 0; i < strlen(text->raw); i = i + 1) {
         // is the number of newlines == offset?
@@ -140,6 +140,10 @@ void model_text_set_visibile(struct ModelText *text) {
 
         if (text->raw[i] == *LINE_BREAK) {
             line_breaks_seen = line_breaks_seen + 1;
+            // We have enough lines of text to show? Great break out then
+            if (line_breaks_seen - text->lines.offset == innerHright) {
+                break;
+            }
         }
     }
     //text.lines.offset;
@@ -591,7 +595,7 @@ int main(int argc, char **argv) {
 
     while (true) {
         input_console_disable_char();
-        model_text_set_visibile(&text);
+        model_text_set_visibile(&text, view.window.geometry.innerHeight);
 
         view_add_text(&view, text.visibile);
         view_add_scrollbar(&view, &text);
