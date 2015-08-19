@@ -7,6 +7,8 @@
 #include <getopt.h>
 #include <sys/ioctl.h>
 
+// To compile: gcc -x c lesser.c -o lesser
+
 #define BUFFERSIZE       1
 #define VIEW_BLANK_CHAR  "X"
 #define VIEW_SCROLL_CHAR "Y"
