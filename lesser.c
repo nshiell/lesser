@@ -7,47 +7,12 @@
 #include <getopt.h>
 #include <sys/ioctl.h>
 
+#include "defines.c"
+#include "io.c"
+
 // To compile: gcc -x c lesser.c -o lesser
 
-#define BUFFERSIZE       1
-#define VIEW_BLANK_CHAR  "X"
-#define VIEW_SCROLL_CHAR "Y"
-#define LINE_BREAK       "\n"
-
-#define GEOMETERY_WINDOW_WIDTH_MIN      10
-#define GEOMETERY_WINDOW_WIDTH_MAX      150
-#define GEOMETERY_WINDOW_WIDTH_HINTS    99
-#define GEOMETERY_WINDOW_WIDTH_DEFAULT  60
-
-#define GEOMETERY_WINDOW_HEIGHT_MIN     4
-#define GEOMETERY_WINDOW_HEIGHT_MAX     60
-#define GEOMETERY_WINDOW_HEIGHT_HINTS   24
-#define GEOMETERY_WINDOW_HEIGHT_DEFAULT 20
-
 #define STREAM_PATH_DEFAULT  "/dev/stdin"
-
-#define PROGRAM_LESSER_DESCRIPTION "Usage: [PIPE FROM STDIN |] lesser [FILE] [OPTION] \n\
-\n\
-A program that allows you to view files and other streams (from stdin) in a scrollable manner.\n\
-You can use this program in a similar way to less although this program is *far* less advanced,\n\
-and for now is just an experimant into writing programs in c. \n\
-\n\
-Options:\n\
-  -w, --width  <number>    Width of the window\n\
-  -h, --height <number>    Height of the window\n\
-  -e, --help               Show some help\n"
-
-#define PROGRAM_LESSER_HINTS "When running the program you can see a scrollbar on the right\n\
-to show how far down the page you are.\n\
-press space, or down arrow or enter to see the next line\n\
-press up to go up one line\n\
-press enter or page down to jump down one screen (window's worth of text)\n\
-press page up to go up one screen\n\
-press q or any other key to quit.\n\
-Written by Nicholas Shiell (NShiell), please feel free to hack the sourcecode yourself,\n\
-but if you do please let me have your work.\n\
-\n\
-This is licenced under the terms of the GNU GPLv3." 
 
 typedef int bool;
 #define true  1
@@ -103,7 +68,7 @@ struct ModelText {
  */
 struct ModelText model_text_create(char *raw) {
     struct ModelText text;
-    
+
     int i;
     text.lines.count = 0;
     for (i = 0; i < strlen(raw); i = i + 1) {
@@ -132,7 +97,7 @@ void model_text_set_visibile(struct ModelText *text, int innerHright) {
 
     //char *r = (char*)malloc(130000);
     //r[0] = '\0';
-    
+
     for (i = 0; i < strlen(text->raw); i = i + 1) {
         // is the number of newlines == offset?
         if (line_breaks_seen >= text->lines.offset) {
@@ -170,7 +135,7 @@ struct View view_create(int width, int height) {
     }
 
     strcat(spaces, VIEW_SCROLL_CHAR);
-    
+
     strcat(win, " ");
     for (i = 0; i < width - 2; i++) {
         strcat(win, "_");
@@ -183,16 +148,16 @@ struct View view_create(int width, int height) {
         strcat(win, spaces);
         strcat(win, "|\n");
     }
-    
+
     strcat(win, "'");
     for (i = 0; i < width - 2; i++) {
         strcat(win, "-");
     }
     strcat(win, "'");
-    
+
     struct View view;
     view.window.rendered = (char*)malloc(3000);
-    
+
     view.window.template = (char*)malloc(3000);
     view.window.template = win;
     view.window.geometry.innerWidth = width - 2;
@@ -219,14 +184,14 @@ void view_add_scrollbar(struct View *view, struct ModelText *text) {
     if (thumb_offset > view->window.geometry.innerHeight - thumb_size) {
         thumb_offset = view->window.geometry.innerHeight - thumb_size;
     }
-    
+
     char *template_char;
     //template_char = (char*)malloc(1);
     template_char[1];
     int i;
     int last_scroll_Char = -1;
     int thumb_added = 0;
-    
+
     for (i = 0; i < strlen(view->window.template); i = i + 1) {
         *template_char = view->window.template[i];
         if (*template_char == *VIEW_SCROLL_CHAR) {
@@ -241,7 +206,7 @@ void view_add_scrollbar(struct View *view, struct ModelText *text) {
                 view->window.rendered[i] = *"*";
                 thumb_added++;
             }
-            
+
             last_scroll_Char = i;
         }
     }
@@ -303,7 +268,7 @@ void view_add_text(struct View *view, char *text) {
     // Mark which line of text we are on
     int current_template_line = 0;
 
-    //char (char*)malloc((view->window.geometry.height + 1) * (view->window.geometry.innerWidth + 1));    
+    //char (char*)malloc((view->window.geometry.height + 1) * (view->window.geometry.innerWidth + 1));
     char *text_lines = (char*)malloc(130000);
 
     // Hold the current char from the text
@@ -388,7 +353,7 @@ void view_add_text(struct View *view, char *text) {
 
                     text_char_i = text_char_i + 1;
                 }
-                
+
             }
             // Reset stuff for next line to work correctly
             end_of_line_found = false;
@@ -426,7 +391,7 @@ int input_console_get_key(void) {
     ch = getchar();
 
     int key = 0;
-    
+
     if (ch == 27) { // 27 means cursor key
         getchar();
         ch = getchar();
@@ -451,7 +416,7 @@ int input_console_get_key(void) {
     }*/
 
     //tcsetattr (STDIN_FILENO, TCSANOW, &origterm );
-        
+
     //freopen("/dev/stdin","r", stdin);
     return key;
 }
@@ -513,7 +478,7 @@ void console_parse_geometery_stream_path(int argc, char **argv, int *width, int 
     int opt = 0;
 
     console_get_dimensions(width, height);
-    
+
     //Specifying the expected options
     static struct option long_options[] = {
         // Ags are actually all optional
@@ -524,7 +489,7 @@ void console_parse_geometery_stream_path(int argc, char **argv, int *width, int 
     };
 
     int long_index = 0;
-    while ((opt = getopt_long(argc, argv,"w:h:", 
+    while ((opt = getopt_long(argc, argv,"w:h:",
                   long_options, &long_index )) != -1) {
         switch (opt) {
             case 'e': *is_help = true;
@@ -553,7 +518,7 @@ void console_parse_geometery_stream_path(int argc, char **argv, int *width, int 
 
     // Add in file path
     *stream_path = STREAM_PATH_DEFAULT;
-    
+
     if (optind < argc) {
         while (optind < argc) {
             *stream_path = argv[optind++];
@@ -562,11 +527,15 @@ void console_parse_geometery_stream_path(int argc, char **argv, int *width, int 
 }
 
 int main(int argc, char **argv) {
+    char *raw_text = lesser_io_read();
+    printf("AAA%sZZZ", raw_text);
+    free(raw_text);
+    return 0;
     bool is_help = false;
 
     int width = 0;
     int height = 0;
-    
+
     char *stream_path;
     stream_path = (char*)malloc(100);
     // Populate vars with values from args
@@ -574,7 +543,7 @@ int main(int argc, char **argv) {
 
     // Populate raw_text with standard in, file load, or hints
     char *text_raw = (char*)malloc(130000);
-    
+
     if (is_help) {
         // Get hints as input, andd set the dimentions
         text_raw = program_hints_get();
