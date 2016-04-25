@@ -517,7 +517,7 @@ void console_parse_geometery_stream_path(int argc, char **argv, int *width, int 
     }
 
     // Add in file path
-    *stream_path = STREAM_PATH_DEFAULT;
+    //*stream_path = STREAM_PATH_DEFAULT;
 
     if (optind < argc) {
         while (optind < argc) {
@@ -527,23 +527,36 @@ void console_parse_geometery_stream_path(int argc, char **argv, int *width, int 
 }
 
 int main(int argc, char **argv) {
-    char *raw_text = lesser_io_read();
-    printf("AAA%sZZZ", raw_text);
-    free(raw_text);
-    return 0;
     bool is_help = false;
 
     int width = 0;
     int height = 0;
 
     char *stream_path;
-    stream_path = (char*)malloc(100);
     // Populate vars with values from args
     console_parse_geometery_stream_path(argc, argv, &width, &height, &is_help, &stream_path);
 
     // Populate raw_text with standard in, file load, or hints
-    char *text_raw = (char*)malloc(130000);
+    //char *text_raw = (char*)malloc(130000);
 
+    FILE *stream;
+    if (stream_path) {
+        *stream = fopen("/home/pi/Documents/lesser-git/io.c", "r");
+    } else {
+        *stream = stdin;
+    }
+    
+    char *raw_text = lesser_io_read(stream);
+    printf("AAA%sZZZ", raw_text);
+    free(raw_text);
+    return 0;
+    
+/*    
+    
+    
+    
+    
+    // Do help!
     if (is_help) {
         // Get hints as input, andd set the dimentions
         text_raw = program_hints_get();
@@ -602,5 +615,5 @@ int main(int argc, char **argv) {
         console_cursor_move_by(view.window.geometry.height - 1, view.window.geometry.width);
     }
 
-    return 0;
+    return 0;*/
 }
